@@ -181,7 +181,10 @@ Helsinki achieves the highest BLEU per billion parameters (a rough efficiency me
 
 ---
 
-## 11. Next Steps
+## 11. Downstream Analysis
 
-- **Part B (token analysis):** Run on Kaggle CPU using `sacrebleu_results.csv` — analyzes subword tokenization, expansion ratios, and vocabulary coverage per model.
-- **Part C (Indic token behavior):** Run on Kaggle CPU using Part B outputs — analyzes Tamil-specific token patterns, character-level statistics, and cross-model comparison.
+Parts B and C of this pipeline have been completed. Their findings extend and explain the Part A results:
+
+**Part B (token analysis):** Using `sacrebleu_results.csv` as input, Part B computed four tokenization metrics (expansion_ratio, avg_word_length, subword_fragmentation, unknown_token_rate) for each model across all 100 sentences. Key finding: Helsinki's tokenizer maps 33.62% of Tamil tokens to `<unk>`, directly explaining its low BLEU. IndicTrans2 has the highest expansion ratio (5.15) but zero unknown tokens — its aggressive subword fragmentation is the cost of complete Tamil morphological coverage. See `part_b_token_analysis/REPORT.md` for the full analysis.
+
+**Part C (Indic token behavior):** Using `engineered_features.csv` from Part B, Part C performs a deeper analysis of Tamil-specific vocabulary coverage, character-level token statistics, and cross-model comparison of Indic script handling. See `part_c_indic_token_behavior/observations.md` for findings.
