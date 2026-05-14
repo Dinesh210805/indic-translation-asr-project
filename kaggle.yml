@@ -1,25 +1,16 @@
-# Kaggle Kernel Configuration
-# Run each notebook in order: Part A → Part B → Part C
-# Accelerator: GPU P100  |  Internet: enabled (model downloads)
-#
-# Usage with Kaggle CLI:
-#   kaggle kernels push -p task1_translation_evaluation/part_a_batch_translation
-#   kaggle kernels push -p task1_translation_evaluation/part_b_token_analysis
-#   kaggle kernels push -p task1_translation_evaluation/part_c_indic_token_behavior
-
 kernels:
   - id: part-a-batch-translation
-    title: "Task 1 Part A - Batch Translation Evaluation"
-    code_file: task1_translation_evaluation/part_a_batch_translation/part_a_translation_evaluation.ipynb
+    title: Task 1 Part A - Batch Translation Evaluation
+    code_file: >-
+      task1_translation_evaluation/part_a_batch_translation/part_a_translation_evaluation.ipynb
     language: python
     kernel_type: notebook
     is_private: true
     enable_gpu: true
     enable_internet: true
     dataset_sources: []
-
   - id: part-b-token-eda
-    title: "Task 1 Part B - Token-Level EDA"
+    title: Task 1 Part B - Token-Level EDA
     code_file: task1_translation_evaluation/part_b_token_analysis/part_b_token_eda.ipynb
     language: python
     kernel_type: notebook
@@ -27,13 +18,17 @@ kernels:
     enable_gpu: false
     enable_internet: true
     dataset_sources: []
-
   - id: part-c-indic-token-behavior
-    title: "Task 1 Part C - Indic Token Behavior Analysis"
-    code_file: task1_translation_evaluation/part_c_indic_token_behavior/part_c_indic_token_analysis.ipynb
+    title: Task 1 Part C - Indic Token Behavior Analysis
+    code_file: >-
+      task1_translation_evaluation/part_c_indic_token_behavior/part_c_indic_token_analysis.ipynb
     language: python
     kernel_type: notebook
     is_private: true
     enable_gpu: false
     enable_internet: true
     dataset_sources: []
+code_file: >-
+  task1_translation_evaluation\part_a_batch_translation\part_a_translation_evaluation.ipynb
+accelerator: none
+internet: false
