@@ -1,0 +1,4 @@
+# Minimal requirements for translation evaluation experiments
+pandas
+sacrebleu
+datasets
