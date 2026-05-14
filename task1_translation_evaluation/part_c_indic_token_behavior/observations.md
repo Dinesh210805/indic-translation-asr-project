@@ -24,7 +24,7 @@
 - This metric directly reflects tokeniser efficiency for Tamil script
 
 ## Surprising Result
-- *(To be filled after Kaggle run)* The memory footprint chart may show that a MADLAD translation (longer Tamil output due to conservative phrasing) can have a **higher** memory score than a shorter IndicTrans2 translation, even if IndicTrans2 has a lower per-token expansion ratio. Output length interacts with expansion ratio in unexpected ways.
+- *(To be confirmed after Part C run)* The memory footprint chart is expected to show that MADLAD translations (confirmed longer/more conservative from Part A) produce higher O(n²) memory scores than IndicTrans2 translations — even though MADLAD has higher corpus BLEU (29.58 vs 27.75). This means the "best" corpus BLEU model is also the most memory-hungry at inference time, which strengthens the case for IndicTrans2 in resource-constrained deployments.
 
 ## Model Recommendation
 **IndicTrans2** dominates on all three dimensions:

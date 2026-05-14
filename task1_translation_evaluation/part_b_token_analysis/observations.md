@@ -22,7 +22,8 @@
 - NLLB-200, IndicTrans2, mT5, MADLAD should have near-zero UNK rates due to large shared vocabularies
 
 ## Surprising Result
-- *(To be filled after Kaggle run)* mT5 (a non-MT model) may show a **lower** expansion ratio than Helsinki (a dedicated EN→TA model) purely because its 250K vocabulary has better Unicode Tamil coverage. This illustrates that vocabulary size matters as much as task-specific training for tokenisation quality.
+- *(To be confirmed after Part B run)* mT5 (a non-MT model) may show a **lower** expansion ratio than Helsinki (a dedicated EN→Dravidian model) purely because its 250K vocabulary has better Unicode Tamil coverage. This would illustrate that vocabulary size matters as much as task-specific training for tokenisation quality.
+- Also watch: MADLAD-400 translations (confirmed longer due to conservative phrasing in Part A) may produce higher token counts than IndicTrans2 despite IndicTrans2 having the higher per-sentence BLEU — output verbosity interacts with expansion ratio.
 
 ## Model Recommendation
 For downstream tasks requiring efficient Tamil tokenisation (e.g., summarisation, QA):

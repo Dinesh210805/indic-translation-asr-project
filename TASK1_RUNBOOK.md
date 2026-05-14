@@ -12,7 +12,7 @@ Task 1 runs **three Kaggle notebooks in strict order**.
 Part A  →  sacrebleu_results.csv  →  Part B  →  engineered_features.csv  →  Part C
 ```
 
-- **Part A** needs GPU (P100). Runs 5 translation models sequentially (~60–90 min).
+- **Part A** needs GPU (Tesla T4 or P100). Runs 5 translation models sequentially (~60–90 min).
 - **Part B** is CPU-only. Loads Part A CSV, computes token metrics (~5 min).
 - **Part C** is CPU-only. Loads Part B CSV, runs vocab analysis (~5 min).
 
@@ -62,7 +62,7 @@ After pushing, go to https://www.kaggle.com/code and open your `part-a-batch-tra
 
 | Setting | Required value |
 |---------|---------------|
-| Accelerator | **GPU P100** |
+| Accelerator | **GPU T4** (or P100 — either works) |
 | Internet | **On** (needed for model downloads) |
 | Runtime | Python 3 |
 
@@ -81,7 +81,7 @@ Click **Run All** (or **Save Version → Run All Cells**).
 5. Saves 2 plots: `plots/parta_bleu_analysis.png`, color-coded results table
 
 ### Expected runtime
-60–90 minutes total on P100.
+60–90 minutes total on T4/P100.
 
 ### Verify it worked
 After the run completes, check the **Output** tab in Kaggle. You should see:
@@ -185,17 +185,15 @@ Download plots from Kaggle Output tab → save to `task1_translation_evaluation/
 After all three notebooks run, open the `observations.md` files and replace the "TBD after run" / placeholder lines with actual numbers from the Kaggle output.
 
 ### Part A — `part_a_batch_translation/observations.md`
-Replace the BLEU column in the models table:
+**Already complete.** Actual corpus BLEU results:
 ```
-| IndicTrans2 | ... | XX.XX (from Kaggle output) |
-| NLLB-200    | ... | XX.XX |
-| Helsinki    | ... | XX.XX |
-| MADLAD      | ... | XX.XX |
+MADLAD-400  : 29.58
+IndicTrans2 : 27.75
+NLLB-200    : 24.17
+Helsinki    :  8.26
+mT5         : excluded (tokenizer only)
 ```
-
-Fill in the **Key Findings** and **Surprising Result** sections with what you observed.  
-Example (with real numbers):
-> IndicTrans2 achieved corpus BLEU of 28.4, outperforming NLLB-200 (22.1) by 6.3 points.
+See `REPORT.md` in the same folder for the full post-run analysis.
 
 ### Part B — `part_b_token_analysis/observations.md`
 After running, the expansion ratio table prints to the console:
@@ -326,7 +324,7 @@ kaggle config set -n username -v YOUR_USERNAME
 
 ```
 HuggingFace
-facebook/flores
+openlanguagedata/flores_plus
 eng_Latn-tam_Taml
         │
         ▼
@@ -359,8 +357,8 @@ eng_Latn-tam_Taml
 
 | Item | Value |
 |------|-------|
-| Dataset | `facebook/flores`, split `eng_Latn-tam_Taml`, first 100 rows |
-| Part A GPU | P100 required, 16GB VRAM |
+| Dataset | `openlanguagedata/flores_plus`, split `eng_Latn-tam_Taml`, first 100 devtest rows |
+| Part A GPU | T4 (15.6GB VRAM) or P100 (16GB VRAM) |
 | Part A runtime | ~60–90 min |
 | Part B/C runtime | ~5–10 min each, CPU only |
 | IndicTrans2 task prefix | none — uses `forced_bos_token_id` |

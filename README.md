@@ -1,6 +1,6 @@
 # Indic Translation & ASR Evaluation
 
-End-to-end evaluation suite for English → Tamil machine translation using five open-source models on the FLoRes-200 benchmark. Built for Kaggle GPU P100.
+End-to-end evaluation suite for English → Tamil machine translation using five open-source models on the FLoRes-200 benchmark. Part A runs on Kaggle GPU (Tesla T4); Parts B and C are CPU-only and can run locally.
 
 ## Project Structure
 
@@ -23,13 +23,13 @@ indic-translation-asr-project/
 |-------|-----------|-------|
 | IndicTrans2 (`ai4bharat/indictrans2-en-indic-1B`) | 1B | Indic-specific; uses IndicProcessor |
 | NLLB-200 (`facebook/nllb-200-distilled-600M`) | 600M | Multilingual; src/tgt lang codes required |
-| Helsinki MarianMT (`Helsinki-NLP/opus-mt-en-ta`) | ~74M | Compact EN→TA specialist |
+| Helsinki MarianMT (`Helsinki-NLP/opus-mt-en-dra`) | ~74M | EN→Dravidian multilingual (ta/kn/ml/te) |
 | MADLAD-400 (`google/madlad400-3b-mt`) | 3B | Requires `<2ta>` task prefix |
 | mT5-base (`google/mt5-base`) | 580M | Tokenization analysis only — not a translation model |
 
 ## Dataset
 
-**FLoRes-200** — `facebook/flores`, split `eng_Latn-tam_Taml`, first 100 sentences (dev split).
+**FLoRes-200** — `openlanguagedata/flores_plus`, split `eng_Latn-tam_Taml`, first 100 sentences (devtest split).
 
 ## How to Run
 
