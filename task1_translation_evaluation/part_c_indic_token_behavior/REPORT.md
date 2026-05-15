@@ -95,17 +95,17 @@ Five donut charts, one per model. Each shows the proportion of the 20-word test 
 | IndicTrans2 | 0% | **100%** | 0% |
 | Helsinki | 0% | **100%** | 0% |
 
-**Finding 1 — No model produced a UNK token** on this curated test set. All vocabulary gaps are handled by subword fragmentation, not by falling back to UNK. This is encouraging: every model can at least *represent* these Tamil words, even if the representation is coarse.
+**Finding 1 — Helsinki produces `<unk>` for every single test word; the four other models use genuine subword fragmentation.** The classification code marks a word as 'unknown' only when `toks[0] == unk_id`. Helsinki consistently tokenises every test word as `▁|<unk>` — the word-boundary marker `▁` (toks[0]) is not the UNK ID, so the code labels these rows as 'fragmented' rather than 'unknown'. However, the only *content* token is `<unk>`, meaning Helsinki has effectively zero Tamil vocabulary coverage on this test. The four non-Helsinki models produce genuine subword fragments with no UNK tokens at all.
 
 **Finding 2 — NLLB-200 leads on known-word coverage** (25%), despite being a 200-language general-purpose model. Five of the 20 test words have single-token vocabulary entries in NLLB-200's 256K vocabulary. MADLAD (15%) and mT5 (10%) also have some whole-word entries. The common known words tend to be simple, high-frequency nouns and place names that appear often in multilingual training corpora.
 
 **Finding 3 — IndicTrans2 shows 0% known words.** This is the most counterintuitive result. The pre-run hypothesis was that IndicTrans2, with its dedicated Indic SentencePiece vocabulary, would have the *highest* known-word coverage. The opposite is true.
 
-The explanation lies in design philosophy: IndicTrans2's SentencePiece model is trained to decompose Tamil words into **morphologically meaningful subword fragments**, not to store whole words as single tokens. Representing `வந்திருக்கிறான்` as three morphemic pieces (`வந்து` + `இருக்கிறான்` broken further) retains grammatical structure that a single opaque token cannot. The model's high BLEU score (27.75) relative to models like Helsinki (13.59) confirms this approach works well for translation quality even with 0% whole-word coverage.
+The explanation lies in design philosophy: IndicTrans2's SentencePiece model is trained to decompose Tamil words into **morphologically meaningful subword fragments**, not to store whole words as single tokens. Representing `வந்திருக்கிறான்` as three morphemic pieces (`வந்து` + `இருக்கிறான்` broken further) retains grammatical structure that a single opaque token cannot. The model's high BLEU score (27.75) relative to models like Helsinki (8.26) confirms this approach works well for translation quality even with 0% whole-word coverage.
 
 **Finding 4 — Helsinki also shows 0% known.** Its EN→Dravidian vocabulary is spread across four scripts (Tamil, Kannada, Malayalam, Telugu), leaving each language with fewer dedicated entries than NLLB-200's 200-language spread.
 
-**Interpreting the donut charts:** A model with a large amber (fragmented) slice is not necessarily poor — fragmentation is acceptable if the subword fragments align with Tamil morpheme boundaries. The critical failure mode is the red (UNK) slice, which signals the tokeniser has abandoned representation entirely. All models avoid this on the curated test, though Part B showed Helsinki produces 33.62% UNK tokens in actual translation output — the curated test words happened to avoid Helsinki's vocabulary blind spots.
+**Interpreting the donut charts:** A model with a large amber (fragmented) slice is not necessarily poor — fragmentation is acceptable if the subword fragments align with Tamil morpheme boundaries. The critical failure mode is the red (UNK) slice, which signals the tokeniser has abandoned representation entirely. The four non-Helsinki models avoid this entirely. Helsinki shows 0% in the red (unknown) slice only because the classification code checks `toks[0] == unk_id`: Helsinki outputs `▁|<unk>` for every test word, and the word-boundary marker `▁` is not the UNK ID, so each entry is technically classified as "fragmented". In practice Helsinki produces no meaningful Tamil tokens — only UNK — for every word in the test set. Part B confirms this with its 33.62% sentence-level UNK rate.
 
 ---
 
@@ -133,7 +133,7 @@ A horizontal bar chart sorted from lowest to highest memory score. Each bar is `
 
 This trade-off is real and important: IndicTrans2 achieves BLEU=27.75 (second overall), but it is the most expensive model to run at inference. For document-scale translation or real-time ASR post-processing where sequences can be hundreds of tokens, this gap becomes a hard constraint.
 
-**Helsinki is cheapest** despite having the worst BLEU (13.59). Its near-1:1 expansion ratio produces very short Tamil token sequences. However, the cheapness comes from a different problem: Helsinki collapses many Tamil words to UNK, which trivially reduces token count at the cost of translation quality.
+**Helsinki is cheapest** despite having the worst BLEU (8.26). Its near-1:1 expansion ratio produces very short Tamil token sequences. However, the cheapness comes from a different problem: Helsinki collapses Tamil words to `▁|<unk>` — two tokens per word regardless of word length — which trivially produces short sequences at the cost of translation quality.
 
 **Cross-task relevance:** For Task 2 of this project (ASR evaluation), an automatic speech recognition system generates Tamil transcriptions that then need post-processing or evaluation. If a Transformer model is used for that post-processing, the O(n²) cost of IndicTrans2-length sequences would limit batch sizes significantly. NLLB-200 strikes the best balance between quality and memory efficiency for such downstream use cases.
 
@@ -178,11 +178,11 @@ Part C closes the loop on a question raised in Part A: why does Helsinki produce
 
 | Part | Metric | Helsinki | NLLB-200 | Difference |
 |------|--------|---------|---------|-----------|
-| A | BLEU score | 13.59 | 23.88 | NLLB-200 +10.29 points |
+| A | BLEU score | 8.26 | 24.17 | NLLB-200 +15.91 points |
 | B | Unknown token rate | 33.62% | 0.00% | Helsinki loses 1 in 3 words |
 | B | Expansion ratio | 0.99 | 1.38 | Helsinki nearly 1:1 (translation is short/incomplete) |
 | C | Known-word coverage | 0% | 25% | NLLB-200 has real vocabulary entries for Tamil words |
-| C | Memory footprint | Lowest | Low | Helsinki cheaper but for wrong reasons (UNK collapse) |
+| C | Memory footprint | Lowest | Low | Helsinki cheaper but for wrong reasons (▁\|<unk> collapse) |
 
 The pattern is consistent: Helsinki's vocabulary is too thin for Tamil. Its EN→Dravidian training splits vocabulary budget across four languages, leaving Tamil under-resourced. NLLB-200's 256K vocabulary, despite spanning 200 languages, has proportionally more Tamil entries — enough to achieve 25% known-word coverage and 0% UNK in actual translations.
 
@@ -194,8 +194,8 @@ The pattern is consistent: Helsinki's vocabulary is too thin for Tamil. Its EN�
 |----------|------------------|--------|
 | Highest BLEU quality | **MADLAD** (29.58) | Best corpus BLEU, 0% UNK, good coverage |
 | Best translation + Indic morphology | **IndicTrans2** (27.75) | Morpheme-aligned tokenisation, 0% UNK; accepts higher memory cost |
-| Balanced quality + memory efficiency | **NLLB-200** (23.88) | Best known-word coverage (25%), 0% UNK, 4th lowest memory |
-| Avoid | **Helsinki** (13.59) | 33.62% UNK, 0% known, worst BLEU |
+| Balanced quality + memory efficiency | **NLLB-200** (24.17) | Best known-word coverage (25%), 0% UNK, 4th lowest memory |
+| Avoid | **Helsinki** (8.26) | All Tamil words → `▁\|<unk>`, 33.62% UNK in translation output, worst BLEU |
 
 For resource-constrained deployment (mobile, edge, long-document batch processing): **NLLB-200** is the clear choice. It delivers acceptable BLEU with the best vocabulary coverage and far lower memory pressure than IndicTrans2.
 
@@ -209,7 +209,7 @@ For server-side batch translation with access to GPU memory: **MADLAD** or **Ind
 - **Memory score is a proxy** — `token_count²` captures attention complexity but not batch memory, KV-cache size, or hidden-state overhead. Real inference memory is roughly 5–10× higher per token than the proxy implies.
 - **No model weight loading** — Part C uses tokenisers only. All conclusions about memory footprint, quality, and efficiency are based on tokenisation behaviour, not on actual model inference.
 - **IndicTrans2 0% known is a design feature** — interpreting this as "poor vocabulary coverage" would be wrong. The morpheme-splitting approach is intentional and produces better translations than models with higher known-word percentages (e.g., NLLB-200 known=25% but BLEU=23.88 vs IndicTrans2 known=0% but BLEU=27.75).
-- **Helsinki's 0% UNK on word test vs 33.62% in Part B** — the curated test words were chosen from common Tamil vocabulary that Helsinki can handle. The real-world UNK rate of 33.62% reflects how often uncommon Tamil forms appear in running FLoRes-200 text.
+- **Helsinki's 0% 'unknown' classification vs 33.62% in Part B** — the classification code marks 'unknown' only when `toks[0] == unk_id`. Helsinki produces `▁|<unk>` for every test word, so each is classified as 'fragmented' (not 'unknown'). The `<unk>` token IS present in every Helsinki row as toks[1]. Helsinki effectively fails on all 20 test words; the 33.62% Part B rate measures the same vocabulary failure in running translation output.
 
 ---
 

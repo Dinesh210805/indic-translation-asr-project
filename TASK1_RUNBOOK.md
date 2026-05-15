@@ -258,7 +258,7 @@ Before submitting, verify every item below.
 
 ### Part A
 - [ ] `part_a_translation_evaluation.ipynb` — all cells present, no errors in output
-- [ ] `sacrebleu_results.csv` — 100 rows, columns: `english`, `reference_tamil`, `pred_Helsinki`, `pred_mT5`, `pred_NLLB-200`, `pred_IndicTrans2`, `pred_MADLAD`, `bleu_Helsinki`, `bleu_NLLB-200`, `bleu_IndicTrans2`, `bleu_MADLAD`
+- [ ] `sacrebleu_results.csv` — 100 rows, columns: `source_english`, `reference_tamil`, `pred_Helsinki`, `pred_mT5`, `pred_NLLB-200`, `pred_IndicTrans2`, `pred_MADLAD`, `bleu_Helsinki`, `bleu_NLLB-200`, `bleu_IndicTrans2`, `bleu_MADLAD`
 - [ ] `plots/parta_bleu_analysis.png` — BLEU bar + KDE density chart
 - [ ] `observations.md` — actual BLEU numbers filled in (not placeholders)
 

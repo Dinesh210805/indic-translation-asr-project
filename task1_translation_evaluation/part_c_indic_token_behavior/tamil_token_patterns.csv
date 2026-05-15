@@ -1,2 +1,6 @@
-pattern,count,notes
-"்",100,virama occurrences
+model,known,fragmented,unknown,known_pct,fragmented_pct,unknown_pct
+IndicTrans2,0,20,0,0.0,100.0,0.0
+NLLB-200,5,15,0,25.0,75.0,0.0
+mT5,2,18,0,10.0,90.0,0.0
+Helsinki,0,20,0,0.0,100.0,0.0
+MADLAD,3,17,0,15.0,85.0,0.0

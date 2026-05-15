@@ -19,7 +19,7 @@ Actual results from running `compute_vocab_stats()` on 20 Tamil test words:
 | IndicTrans2 | 0% | **100%** | 0% |
 | Helsinki | 0% | **100%** | 0% |
 
-**Notable result**: No model produced a single UNK token on this curated 20-word test set. All unrecognised words are handled via fragmentation (subword splitting), not by falling back to UNK.
+**Notable result**: Helsinki produces `▁|<unk>` for every single test word — the `<unk>` token IS present in all 20 Helsinki entries (as toks[1]). The classification code marks a word 'unknown' only when `toks[0] == unk_id`; since toks[0] is the word-boundary marker `▁`, Helsinki rows are classified as 'fragmented'. In practice Helsinki has zero meaningful Tamil vocabulary coverage. The four non-Helsinki models produce genuine subword fragments with no UNK tokens.
 
 **NLLB-200 leads** with 25% known words — its 256K vocabulary spread across 200 languages still reserves enough entries for common Tamil nouns and verb roots. MADLAD (15%) and mT5 (10%) follow. IndicTrans2 and Helsinki both show 0% known, meaning every single test word is split into multiple subword tokens.
 
@@ -29,14 +29,16 @@ The notebook's own expected findings section predicted IndicTrans2 would have th
 
 **Why this happens:** IndicTrans2 uses a morpheme-aligned SentencePiece model trained to decompose Tamil words into *linguistically meaningful morpheme fragments*, not to store whole words as single tokens. This is intentional design: representing `வந்திருக்கிறான்` ("he has come") as 2–4 morphemic pieces (`வந்து` + `இருக்கிறான்`) retains grammatical structure that a single opaque token would not. The 0% known result is a consequence of this philosophy — the vocabulary prioritises sub-morpheme granularity over whole-word lookup.
 
-### Helsinki 0% UNK in Vocab Test vs 33.62% UNK in Part B
+### Helsinki: 0% 'Unknown' Classification vs 33.62% UNK in Part B
 
-Part B measured Helsinki's unknown_token_rate at 33.62% across 100 full translation sentences. Yet the Part C word-level test shows 0% UNK on all 20 words. These two metrics are complementary, not contradictory:
+Part B measured Helsinki's unknown_token_rate at 33.62% across 100 full translation sentences. The Part C word-level test shows 0% in the 'unknown' category — but this is a classification artefact, **not** evidence that Helsinki handles the test words:
 
-- **Part C** tests 20 curated common Tamil words — nouns, verbs, proper nouns all within the EN→Dravidian training distribution
-- **Part B** measures actual translation output for all 100 FLoRes-200 sentences, which includes Tamil words outside the EN→Dravidian vocabulary (technical terms, rare morphological forms, Unicode edge cases)
+- The code marks a word 'unknown' only when `toks[0] == unk_id`
+- Helsinki outputs `▁|<unk>` (2 tokens) for **every single one** of the 20 test words
+- `toks[0]` is `▁` (word-boundary marker), which is not the UNK ID → classified as 'fragmented'
+- But `toks[1]` IS `<unk>` — the only content token Helsinki can produce for these words
 
-Helsinki's UNK problem appears on tail-distribution Tamil vocabulary, not on everyday common words. The 33.62% Part B rate reflects how frequently those edge cases appear in running text, not that common words are unknown.
+So Helsinki's 100% 'fragmented' row in the donut chart should be read as complete vocabulary failure, not as meaningful subword splitting. Both Part B (33.62% UNK in translations) and Part C (all 20 words → `▁|<unk>`) consistently show the same underlying problem: Helsinki's EN→Dravidian vocabulary cannot represent Tamil text.
 
 ### Memory Footprint (VIZ C2 — Horizontal Bar Chart)
 
@@ -58,9 +60,9 @@ For edge deployment or processing long documents without chunking, this gap make
 
 | Metric | Best Model | Worst Model | Key Insight |
 |--------|-----------|-------------|-------------|
-| BLEU (Part A) | MADLAD 29.58 | Helsinki 13.59 | Quality gap driven by vocabulary |
+| BLEU (Part A) | MADLAD 29.58 | Helsinki 8.26 | Quality gap driven by vocabulary |
 | Unknown token rate (Part B) | IndicTrans2/MADLAD/NLLB 0% | Helsinki 33.62% | Helsinki's OOV problem explains its BLEU collapse |
-| Known-word coverage (Part C) | NLLB-200 25% | IndicTrans2/Helsinki 0% | No model treats Tamil words as whole-unit tokens |
+| Known-word coverage (Part C) | NLLB-200 25% | IndicTrans2/Helsinki 0% | Helsinki's 0% is `▁\|<unk>` failure; IndicTrans2's is intentional morpheme splitting |
 | Memory footprint (Part C) | Helsinki (lowest) | IndicTrans2 (highest) | IndicTrans2's quality comes at an O(n²) memory premium |
 | Chars/token (Part B+C) | mT5 ~3.92 | Helsinki (lowest) | mT5 encodes most Tamil content per token |
 
@@ -68,9 +70,9 @@ For edge deployment or processing long documents without chunking, this gap make
 
 **For highest translation quality (BLEU priority):** MADLAD (29.58) or IndicTrans2 (27.75). Both achieve 0% UNK and good fragmentation coverage. IndicTrans2 trades higher memory cost for morphologically-informed tokenisation.
 
-**For balanced quality + memory efficiency:** **NLLB-200** — 25% known word coverage (best), 0% UNK, moderate expansion (1.38×), and good BLEU (23.88). Best all-around choice for resource-constrained deployment.
+**For balanced quality + memory efficiency:** **NLLB-200** — 25% known word coverage (best), 0% UNK, moderate expansion (1.38×), and good BLEU (24.17). Best all-around choice for resource-constrained deployment.
 
-**Avoid Helsinki** in any production Tamil translation task: 0% known words, 33.62% sentence-level UNK rate, BLEU of 13.59. Its EN→Dravidian training is spread too thin across four languages to give Tamil adequate vocabulary coverage.
+**Avoid Helsinki** in any production Tamil translation task: all test words tokenise to `▁|<unk>`, 33.62% sentence-level UNK rate, BLEU of 8.26. Its EN→Dravidian training is spread too thin across four languages to give Tamil adequate vocabulary coverage.
 
 ## Limitations
 - Vocabulary coverage is evaluated on 20 curated words — chosen to represent common Tamil forms, not a random sample of the full Tamil lexicon
