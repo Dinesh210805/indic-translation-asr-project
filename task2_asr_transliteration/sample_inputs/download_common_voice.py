@@ -105,6 +105,7 @@ def stream_tar_and_extract(url: str):
 
     tsv_rows = []        # rows from test.tsv
     clip_bytes = {}      # {clip_filename: bytes}
+    wanted_clips: set   = set()   # filenames referenced in test.tsv; populated once TSV is parsed
 
     with requests.get(url, stream=True, timeout=300) as resp:
         resp.raise_for_status()
@@ -145,11 +146,18 @@ def stream_tar_and_extract(url: str):
                         csv.field_size_limit(10 ** 7)
                         reader = csv.DictReader(io.StringIO(content), delimiter="\t")
                         tsv_rows = list(reader)
-                    log.info("Loaded %d rows from test.tsv", len(tsv_rows))
+                        # Build lookup of filenames that belong to the test split.
+                        # The clips/ directory holds ALL splits; without this filter
+                        # we'd pull train/dev clips that have no matching sentence.
+                        wanted_clips = {row["path"] for row in tsv_rows if "path" in row}
+                    log.info("Loaded %d rows from test.tsv (%d unique clip names)", len(tsv_rows), len(wanted_clips))
 
                 # Extract MP3 clips that are in test.tsv
                 elif "/clips/" in name and name.endswith(".mp3"):
                     clip_name = Path(name).name
+                    # Skip clips not referenced by the test split
+                    if wanted_clips and clip_name not in wanted_clips:
+                        continue
                     if MAX_CLIPS and len(clip_bytes) >= MAX_CLIPS:
                         continue
                     f = tar.extractfile(member)
