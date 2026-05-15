@@ -2,6 +2,7 @@ version: "3.9"
 
 services:
   asr-app:
+    container_name: tamil-asr-app
     build: .
     ports:
       - "7860:7860"
@@ -9,8 +10,9 @@ services:
       - .env
     environment:
       - GRADIO_PORT=7860
-      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
     volumes:
       - ./sample_inputs:/app/sample_inputs:ro
       - ./outputs:/app/outputs
+      - ./models_cache:/app/models_cache
     restart: unless-stopped

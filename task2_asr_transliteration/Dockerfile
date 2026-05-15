@@ -19,6 +19,8 @@ COPY models/ ./models/
 
 ENV PYTHONPATH=/app
 ENV GRADIO_PORT=7860
+ENV TRANSFORMERS_CACHE=/app/models_cache
+ENV HF_HOME=/app/models_cache
 
 EXPOSE 7860
 

@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from transformers import pipeline as hf_pipeline
 from groq import Groq
-from models.model_config import MODEL_CONFIGS, SAMPLE_RATE
+from models.model_config import MODEL_CONFIGS, SAMPLE_RATE, CHUNK_SECONDS, STRIDE_SECONDS
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +51,9 @@ def load_asr_model(model_name: str):
         model=cfg["hf_id"],
         device=device,
         torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+        chunk_length_s=CHUNK_SECONDS,
+        stride_length_s=(STRIDE_SECONDS, STRIDE_SECONDS),
+        token=os.getenv("HF_TOKEN"),
     )
     _loaded_models[model_name] = asr
     logger.info("Model %s loaded.", cfg["hf_id"])
