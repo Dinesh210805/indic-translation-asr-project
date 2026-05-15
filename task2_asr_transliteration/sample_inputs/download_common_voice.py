@@ -1,114 +1,192 @@
 """
-Download Mozilla Common Voice Tamil (cv-corpus) clips from HuggingFace.
+Download Mozilla Common Voice 25.0 Tamil clips via Mozilla Data Collective API.
 
 Usage:
     python download_common_voice.py
 
 Requirements:
-    pip install datasets soundfile
+    pip install requests soundfile numpy
 
 Authentication:
-    Set HF_TOKEN in your .env file (or environment). Required to access
-    mozilla-foundation/common_voice_17_0 (gated dataset — accept terms at
-    https://huggingface.co/datasets/mozilla-foundation/common_voice_17_0 first).
+    Set MDC_API_KEY in your root .env file.
+    Get your key at: https://mozilladatacollective.com/profile/credentials
+
+What this does:
+    1. Calls POST /datasets/:id/download to get a presigned URL (valid 12 hrs)
+    2. Streams the tar.gz to a temp file
+    3. Extracts only the test split (test.tsv + matching clips/)
+    4. Resamples each MP3 to 16kHz mono WAV
+    5. Writes sample_inputs/common_voice/index.csv with ground-truth sentences
 
 Output:
-    sample_inputs/common_voice/*.wav      — audio clips at 16 kHz mono
-    sample_inputs/common_voice/index.csv  — clip filename + ground-truth sentence
+    sample_inputs/common_voice/*.wav
+    sample_inputs/common_voice/index.csv
 """
 
 import os
+import io
 import csv
 import sys
+import tarfile
 import logging
+import tempfile
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
+# Load .env from project root (two levels up from sample_inputs/)
 try:
     from dotenv import load_dotenv
     load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
 except ImportError:
     pass
 
-HF_TOKEN = os.getenv("HF_TOKEN")
-if not HF_TOKEN:
+try:
+    import requests
+except ImportError:
+    sys.exit("Run: pip install requests")
+
+MDC_API_KEY = os.getenv("MDC_API_KEY")
+if not MDC_API_KEY:
     sys.exit(
-        "ERROR: HF_TOKEN not set.\n"
-        "Add HF_TOKEN=hf_... to your root .env file.\n"
-        "Also accept dataset terms at: "
-        "https://huggingface.co/datasets/mozilla-foundation/common_voice_17_0"
+        "ERROR: MDC_API_KEY not set.\n"
+        "Add MDC_API_KEY=your_key to your root .env file.\n"
+        "Get your key at: https://mozilladatacollective.com/profile/credentials"
     )
 
-try:
-    from datasets import load_dataset
-    import soundfile as sf
-    import numpy as np
-except ImportError:
-    sys.exit("Run: pip install datasets soundfile numpy")
-
-DATASET_ID = "mozilla-foundation/common_voice_17_0"
-LANGUAGE = "ta"
-SPLIT = "test"           # 'test' is smaller and fully validated
-MAX_CLIPS = 50           # change to None to download everything
-TARGET_SR = 16000        # Whisper expects 16 kHz
-OUT_DIR = Path(__file__).parent / "common_voice"
+DATASET_ID   = "cmn2gfvyp01geo107izoftfki"   # Common Voice 25.0 Tamil
+API_BASE     = "https://mozilladatacollective.com/api"
+MAX_CLIPS    = 50     # set to None to extract everything from the test split
+OUT_DIR      = Path(__file__).parent / "common_voice"
 
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
+HEADERS = {"Authorization": f"Bearer {MDC_API_KEY}"}
 
-def resample(audio_array: np.ndarray, orig_sr: int, target_sr: int) -> np.ndarray:
-    if orig_sr == target_sr:
-        return audio_array
+
+def get_presigned_url() -> str:
+    log.info("Requesting presigned download URL for dataset %s ...", DATASET_ID)
+    resp = requests.post(
+        f"{API_BASE}/datasets/{DATASET_ID}/download",
+        headers=HEADERS,
+        timeout=30,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    url = data.get("url") or data.get("downloadUrl") or data.get("presignedUrl")
+    if not url:
+        sys.exit(f"Could not find download URL in response: {data}")
+    log.info("Got presigned URL (valid 12 hours).")
+    return url
+
+
+def stream_tar_and_extract(url: str):
+    """Stream the tar.gz and extract test.tsv + test clips without writing full 8 GB."""
+    log.info("Streaming tar.gz from presigned URL ...")
+
+    tsv_rows = []        # rows from test.tsv
+    clip_bytes = {}      # {clip_filename: bytes}
+
+    with requests.get(url, stream=True, timeout=300) as resp:
+        resp.raise_for_status()
+
+        # Wrap the streaming response in a file-like object for tarfile
+        class StreamWrapper(io.RawIOBase):
+            def __init__(self, iterator):
+                self._iter = iterator
+                self._buf = b""
+
+            def readinto(self, b):
+                while not self._buf:
+                    try:
+                        self._buf = next(self._iter)
+                    except StopIteration:
+                        return 0
+                n = min(len(b), len(self._buf))
+                b[:n] = self._buf[:n]
+                self._buf = self._buf[n:]
+                return n
+
+        stream = io.BufferedReader(StreamWrapper(resp.iter_content(chunk_size=1 << 20)))
+
+        with tarfile.open(fileobj=stream, mode="r|gz") as tar:
+            for member in tar:
+                name = member.name
+
+                # Extract test.tsv (ground truth)
+                if name.endswith("/test.tsv") or name == "test.tsv":
+                    log.info("Found test.tsv: %s", name)
+                    f = tar.extractfile(member)
+                    if f:
+                        content = f.read().decode("utf-8")
+                        reader = csv.DictReader(io.StringIO(content), delimiter="\t")
+                        tsv_rows = list(reader)
+                    log.info("Loaded %d rows from test.tsv", len(tsv_rows))
+
+                # Extract MP3 clips that are in test.tsv
+                elif "/clips/" in name and name.endswith(".mp3"):
+                    clip_name = Path(name).name
+                    if MAX_CLIPS and len(clip_bytes) >= MAX_CLIPS:
+                        continue
+                    f = tar.extractfile(member)
+                    if f:
+                        clip_bytes[clip_name] = f.read()
+
+                if MAX_CLIPS and len(clip_bytes) >= MAX_CLIPS and tsv_rows:
+                    log.info("Reached MAX_CLIPS=%d, stopping extraction.", MAX_CLIPS)
+                    break
+
+    return tsv_rows, clip_bytes
+
+
+def convert_and_save(tsv_rows: list, clip_bytes: dict):
     try:
+        import soundfile as sf
+        import numpy as np
         import librosa
-        return librosa.resample(audio_array.astype(np.float32), orig_sr=orig_sr, target_sr=target_sr)
     except ImportError:
-        log.warning("librosa not installed — skipping resample (orig_sr=%d)", orig_sr)
-        return audio_array
+        sys.exit("Run: pip install soundfile numpy librosa")
+
+    # Build a lookup: clip filename -> sentence
+    sentence_map = {row["path"]: row["sentence"] for row in tsv_rows if "path" in row}
+
+    index_path = OUT_DIR / "index.csv"
+    saved = 0
+
+    with open(index_path, "w", newline="", encoding="utf-8") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["filename", "sentence", "original_mp3"])
+
+        for mp3_name, mp3_data in clip_bytes.items():
+            sentence = sentence_map.get(mp3_name, "")
+            if not sentence:
+                continue
+
+            wav_name = mp3_name.replace(".mp3", ".wav")
+            out_path = OUT_DIR / wav_name
+
+            try:
+                audio, orig_sr = librosa.load(io.BytesIO(mp3_data), sr=16000, mono=True)
+                sf.write(str(out_path), audio, 16000)
+                writer.writerow([wav_name, sentence, mp3_name])
+                saved += 1
+                log.info("[%d] Saved %s | %s", saved, wav_name, sentence[:60])
+            except Exception as e:
+                log.warning("Failed to convert %s: %s", mp3_name, e)
+
+    log.info("Done. %d clips saved to %s", saved, OUT_DIR)
+    log.info("Index: %s", index_path)
 
 
 def main():
-    log.info("Loading dataset %s / %s / split=%s ...", DATASET_ID, LANGUAGE, SPLIT)
-    ds = load_dataset(
-        DATASET_ID,
-        LANGUAGE,
-        split=SPLIT,
-        trust_remote_code=True,
-        token=HF_TOKEN,
-    )
+    url = get_presigned_url()
+    tsv_rows, clip_bytes = stream_tar_and_extract(url)
 
-    total = len(ds)
-    limit = min(MAX_CLIPS, total) if MAX_CLIPS else total
-    log.info("Dataset has %d clips. Downloading %d.", total, limit)
+    if not clip_bytes:
+        sys.exit("No clips extracted. Check your API key and dataset ID.")
 
-    index_path = OUT_DIR / "index.csv"
-    with open(index_path, "w", newline="", encoding="utf-8") as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(["filename", "sentence", "speaker_id", "split"])
-
-        for i, row in enumerate(ds):
-            if MAX_CLIPS and i >= MAX_CLIPS:
-                break
-
-            sentence = row.get("sentence", "")
-            speaker_id = row.get("client_id", "unknown")[:8]
-            audio_obj = row["audio"]
-
-            array = np.array(audio_obj["array"], dtype=np.float32)
-            orig_sr = audio_obj["sampling_rate"]
-            array = resample(array, orig_sr, TARGET_SR)
-
-            fname = f"cv_{LANGUAGE}_{i:04d}.wav"
-            out_path = OUT_DIR / fname
-            sf.write(str(out_path), array, TARGET_SR)
-
-            writer.writerow([fname, sentence, speaker_id, SPLIT])
-            log.info("[%d/%d] Saved %s | %s", i + 1, limit, fname, sentence[:60])
-
-    log.info("Done. %d clips saved to %s", limit, OUT_DIR)
-    log.info("Index written to %s", index_path)
+    convert_and_save(tsv_rows, clip_bytes)
 
 
 if __name__ == "__main__":
