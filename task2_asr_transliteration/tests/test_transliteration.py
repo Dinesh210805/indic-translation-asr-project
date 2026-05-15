@@ -8,8 +8,8 @@ def test_basic_tamil_to_itrans():
     assert len(result) > 0
 
 
-def test_basic_tamil_to_iso15919():
-    result = transliterate_tamil_to_latin("வணக்கம்", "ISO15919")
+def test_basic_tamil_to_iso():
+    result = transliterate_tamil_to_latin("வணக்கம்", "ISO")
     assert isinstance(result, str)
     assert len(result) > 0
 
@@ -26,7 +26,7 @@ def test_unknown_scheme_raises():
 
 def test_all_schemes_produce_output():
     text = "தமிழ்"
-    for scheme in ["ITRANS", "ISO15919", "IAST", "HK", "HUNTERIAN"]:
+    for scheme in ["ITRANS", "ISO", "IAST", "HK", "SLP1"]:
         result = transliterate_tamil_to_latin(text, scheme)
         assert isinstance(result, str) and len(result) > 0, f"Scheme {scheme} returned empty"
 

@@ -59,7 +59,6 @@ def build_ui() -> gr.Blocks:
     """Build and return the Gradio Blocks interface."""
     with gr.Blocks(
         title="Tamil ASR + Transliteration",
-        theme=gr.themes.Soft(),
     ) as demo:
         gr.Markdown(
             "## Tamil ASR + Transliteration\n"
@@ -107,8 +106,8 @@ def build_ui() -> gr.Blocks:
         )
 
         gr.Markdown(
-            "**Schemes:** ITRANS (ASCII) · ISO15919 (standard) · IAST (scholarly) "
-            "· HK (Harvard-Kyoto) · HUNTERIAN (colonial romanization)"
+            "**Schemes:** ITRANS (ASCII-friendly) · ISO (ISO 15919 standard) · IAST (scholarly) "
+            "· HK (Harvard-Kyoto) · SLP1 (Sanskrit Library)"
         )
 
     return demo

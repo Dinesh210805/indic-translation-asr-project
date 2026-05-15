@@ -1,15 +1,25 @@
 # Indic Translation & ASR Evaluation
 
-End-to-end evaluation suite for English → Tamil machine translation using five open-source models on the FLoRes-200 benchmark. Part A runs on Kaggle GPU (Tesla T4); Parts B and C are CPU-only and can run locally.
+Two-task evaluation suite covering English→Tamil machine translation (Task 1) and
+Tamil speech recognition with transliteration (Task 2).
 
 ## Project Structure
 
 ```
 indic-translation-asr-project/
 ├── task1_translation_evaluation/
-│   ├── part_a_batch_translation/      # Batch translation + sacreBLEU scoring
+│   ├── part_a_batch_translation/      # Batch MT + sacreBLEU scoring (Kaggle GPU)
 │   ├── part_b_token_analysis/         # Token-level EDA and feature engineering
 │   └── part_c_indic_token_behavior/   # Indic vocab coverage and memory analysis
+├── task2_asr_transliteration/
+│   ├── app/                           # ASR pipeline + Gradio UI
+│   ├── models/                        # Model config
+│   ├── evaluation/                    # WER evaluation scripts + results
+│   ├── sample_inputs/                 # Common Voice downloader + recording guide
+│   ├── tests/                         # Pytest suite (no GPU/API keys needed)
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   └── README.md                      # Full Task 2 setup guide
 ├── data/
 │   └── raw/                           # Raw datasets (gitignored)
 ├── kaggle.yml                         # Kaggle kernel push config
@@ -81,14 +91,29 @@ You can also use the Kaggle Studio VS Code extension with `kaggle.yml` at the re
 | `part_c_indic_token_behavior/REPORT.md` | — | human reference |
 | `part_*/observations.md` | — | human reference |
 
+## Task 2 — Tamil ASR + Transliteration
+
+See [`task2_asr_transliteration/README.md`](task2_asr_transliteration/README.md) for full setup.
+
+Quick start:
+```bash
+cd task2_asr_transliteration
+pip install -r requirements.txt
+cp .env.example .env   # add GROQ_API_KEY
+python -m app.main     # opens http://localhost:7860
+```
+
 ## Requirements
 
-See `requirements.txt`. Key packages: `transformers`, `sacrebleu`, `datasets`, `sentencepiece`, `torch`.
+**Task 1** — see `requirements.txt`. Key packages: `transformers`, `sacrebleu`, `datasets`, `sentencepiece`, `torch`.
 
 Install IndicTrans2 toolkit separately:
 ```bash
 pip install git+https://github.com/AI4Bharat/IndicTransToolkit.git
 ```
+
+**Task 2** — see `task2_asr_transliteration/requirements.txt`.  
+Key packages: `torch`, `transformers`, `gradio`, `librosa`, `groq`, `indic-transliteration`.
 
 ## License
 

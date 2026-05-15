@@ -6,10 +6,10 @@ logger = logging.getLogger(__name__)
 
 SCHEME_MAP = {
     "ITRANS": sanscript.ITRANS,
-    "ISO15919": sanscript.ISO15919,
+    "ISO": sanscript.ISO,
     "IAST": sanscript.IAST,
     "HK": sanscript.HK,
-    "HUNTERIAN": sanscript.HUNTERIAN,
+    "SLP1": sanscript.SLP1,
 }
 
 

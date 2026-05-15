@@ -72,6 +72,24 @@ def get_presigned_url() -> str:
         headers=HEADERS,
         timeout=30,
     )
+
+    if resp.status_code == 403:
+        body = resp.text
+        if "Terms must be accepted" in body:
+            # The API embeds the dataset page URL in the error message — extract it.
+            import re as _re
+            match = _re.search(r'https://\S+', body)
+            dataset_url = match.group(0).rstrip('"}') if match else (
+                f"https://mozilladatacollective.com/datasets/{DATASET_ID}"
+            )
+            sys.exit(
+                "\nERROR: You must accept the dataset terms before downloading.\n"
+                f"  1. Open:  {dataset_url}\n"
+                "  2. Sign in and click the 'Download' button on the dataset page.\n"
+                "  3. Re-run this script.\n"
+            )
+        sys.exit(f"403 Forbidden — check your MDC_API_KEY. Response: {body[:300]}")
+
     resp.raise_for_status()
     data = resp.json()
     url = data.get("url") or data.get("downloadUrl") or data.get("presignedUrl")
@@ -91,11 +109,15 @@ def stream_tar_and_extract(url: str):
     with requests.get(url, stream=True, timeout=300) as resp:
         resp.raise_for_status()
 
-        # Wrap the streaming response in a file-like object for tarfile
+        # Wrap the streaming response in a file-like object for tarfile.
+        # readable() must return True or BufferedReader raises UnsupportedOperation.
         class StreamWrapper(io.RawIOBase):
             def __init__(self, iterator):
                 self._iter = iterator
                 self._buf = b""
+
+            def readable(self):
+                return True
 
             def readinto(self, b):
                 while not self._buf:
@@ -120,6 +142,7 @@ def stream_tar_and_extract(url: str):
                     f = tar.extractfile(member)
                     if f:
                         content = f.read().decode("utf-8")
+                        csv.field_size_limit(10 ** 7)
                         reader = csv.DictReader(io.StringIO(content), delimiter="\t")
                         tsv_rows = list(reader)
                     log.info("Loaded %d rows from test.tsv", len(tsv_rows))

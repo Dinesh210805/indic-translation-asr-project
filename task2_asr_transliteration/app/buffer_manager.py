@@ -23,7 +23,9 @@ class AudioBufferManager:
     ):
         self._queue: queue.Queue = queue.Queue()
         self._chunk_samples = chunk_seconds * sample_rate
-        self._stride_samples = stride_seconds * sample_rate
+        # stride_seconds is the overlap between consecutive chunks;
+        # the window advances by (chunk - stride) each step.
+        self._step_samples = (chunk_seconds - stride_seconds) * sample_rate
         self._sample_rate = sample_rate
 
     def enqueue(self, audio: np.ndarray) -> int:
@@ -47,7 +49,7 @@ class AudioBufferManager:
 
             if end >= len(audio):
                 break
-            start += self._stride_samples
+            start += self._step_samples
 
         logger.debug("Enqueued %d chunks from %d samples", n_chunks, len(audio))
         return n_chunks

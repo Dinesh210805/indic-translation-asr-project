@@ -1,6 +1,7 @@
 import logging
 import os
 
+import gradio as gr
 from dotenv import load_dotenv
 
 load_dotenv()  # load .env before any module imports that read env vars
@@ -18,5 +19,6 @@ if __name__ == "__main__":
     demo.launch(
         server_name="0.0.0.0",  # REQUIRED inside Docker
         server_port=int(os.getenv("GRADIO_PORT", "7860")),
+        theme=gr.themes.Soft(),
         share=False,
     )
