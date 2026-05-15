@@ -20,3 +20,6 @@ venv/
 # ASR JSON outputs — keep dir structure, ignore generated files
 task2_asr_transliteration/outputs/*
 !task2_asr_transliteration/outputs/.gitkeep
+# Common Voice downloaded clips — track index.csv but not audio
+task2_asr_transliteration/sample_inputs/common_voice/*.wav
+task2_asr_transliteration/sample_inputs/common_voice/*.mp3
