@@ -10,5 +10,12 @@ data/raw/
 *.log
 .DS_Store
 venv/
-.venv   
-.env
+.venv
+# Audio files (test inputs — not committed)
+*.wav
+*.mp3
+*.ogg
+*.flac
+*.m4a
+# ASR JSON outputs
+task2_asr_transliteration/outputs/
