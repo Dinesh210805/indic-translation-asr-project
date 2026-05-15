@@ -196,25 +196,27 @@ mT5         : excluded (tokenizer only)
 See `REPORT.md` in the same folder for the full post-run analysis.
 
 ### Part B — `part_b_token_analysis/observations.md`
-After running, the expansion ratio table prints to the console:
+**Already complete.** Actual per-model averages from `engineered_features.csv`:
 ```
-model
-Helsinki       3.21
-IndicTrans2    1.84
-MADLAD         2.15
-NLLB-200       2.03
-mT5            2.67
+model         expansion_ratio  avg_word_length  subword_fragmentation  unknown_token_rate
+Helsinki             0.99             3.62                0.31               33.62%
+IndicTrans2          5.15             0.90                1.11                0.00%
+MADLAD               1.61             2.74                0.37                0.00%
+NLLB-200             1.38             3.15                0.32                0.00%
+mT5                  2.13             3.92                0.26                0.00%
 ```
-Paste those numbers into the observations.
+See `REPORT.md` in the same folder for full post-run analysis.
 
 ### Part C — `part_c_indic_token_behavior/observations.md`
-The vocab coverage percentages print to the console:
+**Already complete.** Actual vocab coverage from `compute_vocab_stats()` output:
 ```
-IndicTrans2    : known=72%  frag=28%  unk=0%
-NLLB-200       : known=45%  frag=55%  unk=0%
-...
+IndicTrans2    : known=0.0%   frag=100.0%  unk=0.0%
+NLLB-200       : known=25.0%  frag=75.0%   unk=0.0%
+mT5            : known=10.0%  frag=90.0%   unk=0.0%
+Helsinki       : known=0.0%   frag=100.0%  unk=0.0%
+MADLAD         : known=15.0%  frag=85.0%   unk=0.0%
 ```
-Paste those into the donut chart observations.
+See `REPORT.md` in the same folder for full post-run analysis.
 
 ---
 

@@ -33,31 +33,53 @@ indic-translation-asr-project/
 
 ## How to Run
 
-Notebooks are designed to run sequentially on Kaggle:
+The pipeline runs in three sequential steps. Part A requires a GPU and runs on Kaggle. Parts B and C are CPU-only and can run either on Kaggle or locally.
 
-1. **Part A** — GPU enabled (P100), internet enabled
-   ```
-   kaggle kernels push -p task1_translation_evaluation/part_a_batch_translation
-   ```
-2. **Part B** — CPU, internet enabled (tokenizer downloads only)
-   ```
-   kaggle kernels push -p task1_translation_evaluation/part_b_token_analysis
-   ```
-3. **Part C** — CPU, internet enabled (tokenizer downloads only)
-   ```
-   kaggle kernels push -p task1_translation_evaluation/part_c_indic_token_behavior
-   ```
+### Part A — Kaggle GPU (required)
+GPU is needed to load and run the 600M–3B parameter translation models.
+```
+kaggle kernels push -p task1_translation_evaluation/part_a_batch_translation
+```
+Download `sacrebleu_results.csv` from the kernel output before running Part B.
 
-Or use the Kaggle Studio VS Code extension with `kaggle.yml` at the repo root.
+### Part B — local or Kaggle CPU
+```bash
+# local
+cd task1_translation_evaluation/part_b_token_analysis
+jupyter notebook part_b_token_eda.ipynb
+
+# or Kaggle
+kaggle kernels push -p task1_translation_evaluation/part_b_token_analysis
+```
+Requires `sacrebleu_results.csv` in the `part_a_batch_translation/` directory.
+
+### Part C — local or Kaggle CPU
+```bash
+# local
+cd task1_translation_evaluation/part_c_indic_token_behavior
+jupyter notebook part_c_indic_token_analysis.ipynb
+
+# or Kaggle
+kaggle kernels push -p task1_translation_evaluation/part_c_indic_token_behavior
+```
+Requires `token_counts.csv` from Part B output.
+
+You can also use the Kaggle Studio VS Code extension with `kaggle.yml` at the repo root for all three parts.
 
 ## Output Artifacts
 
 | File | Written by | Read by |
 |------|-----------|---------|
-| `part_a_batch_translation/sacrebleu_results.csv` | Part A | Part B, Part C |
-| `part_b_token_analysis/token_counts.csv` | Part B | — |
-| `part_b_token_analysis/engineered_features.csv` | Part B | Part C |
+| `part_a_batch_translation/sacrebleu_results.csv` | Part A | Part B |
+| `part_b_token_analysis/token_counts.csv` | Part B | Part C |
+| `part_b_token_analysis/engineered_features.csv` | Part B | — |
+| `part_c_indic_token_behavior/tamil_token_patterns.csv` | Part C | — |
+| `part_c_indic_token_behavior/tokenization_comparison.csv` | Part C | — |
 | `part_*/plots/*.png` | each part | — |
+| `part_a_batch_translation/REPORT.md` | — | human reference |
+| `part_b_token_analysis/REPORT.md` | — | human reference |
+| `part_c_indic_token_behavior/REPORT.md` | — | human reference |
+| `part_*/observations.md` | — | human reference |
 
 ## Requirements
 
