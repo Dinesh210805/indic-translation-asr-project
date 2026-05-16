@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   asr-app:
     container_name: tamil-asr-app
@@ -9,10 +7,12 @@ services:
     env_file:
       - .env
     environment:
-      - GRADIO_PORT=7860
+      - GRADIO_SERVER_NAME=0.0.0.0
+      - GRADIO_SERVER_PORT=7860
       - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - HF_TOKEN=${HF_TOKEN:-}
     volumes:
-      - ./sample_inputs:/app/sample_inputs:ro
-      - ./outputs:/app/outputs
-      - ./models_cache:/app/models_cache
+      - ./sample_inputs:/home/user/app/sample_inputs:ro
+      - ./outputs:/home/user/app/outputs
+      - ./models_cache:/home/user/app/models_cache
     restart: unless-stopped

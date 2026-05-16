@@ -1,3 +1,16 @@
+---
+title: Tamil ASR Transliteration
+emoji: 🎙️
+colorFrom: orange
+colorTo: red
+sdk: gradio
+sdk_version: 4.36.0
+app_file: app.py
+pinned: false
+license: mit
+short_description: Tamil speech → Tamil script → Romanized (5 schemes)
+---
+
 # Task 2 — Tamil ASR + Transliteration
 
 Real-time Tamil speech recognition with romanized transliteration output.  
@@ -55,10 +68,48 @@ python -m app.main
 
 ### 4. Run with Docker
 
+Reviewers can build and run the container with either:
+
 ```bash
+# Option A — docker compose (uses .env automatically)
 docker compose up --build
-# Open http://localhost:7860
+
+# Option B — plain docker (the submission guide style)
+docker build -t asr-system .
+docker run -p 7860:7860 --env-file .env asr-system
 ```
+
+Then open http://localhost:7860. The container runs as non-root (UID 1000) so the same
+image is compatible with Hugging Face Spaces Docker SDK.
+
+### 5. Deploy to Hugging Face Spaces
+
+This folder is already configured as a Gradio Space — the YAML header at the top of this
+README, plus the root-level `app.py`, are everything Spaces needs.
+
+```bash
+# One-time: install + login
+pip install huggingface_hub
+huggingface-cli login
+
+# Create the Space (Gradio SDK)
+huggingface-cli repo create tamil-asr-transliteration --type space --space_sdk gradio
+
+# Push from inside task2_asr_transliteration/
+git init && git remote add space https://huggingface.co/spaces/<your-username>/tamil-asr-transliteration
+git add app.py requirements.txt README.md app/ models/
+git commit -m "Deploy Tamil ASR Space"
+git push space main
+```
+
+In the Space's **Settings → Variables and secrets**, add:
+- `GROQ_API_KEY` (only if you want the Groq Cloud backend)
+- `HF_TOKEN` (only if using gated models)
+
+> **Note on free tier:** HF Spaces free tier is CPU-only (2 vCPU / 16 GB RAM). Local
+> Whisper Small/Medium will run but transcription takes ~30–60 s per clip. For
+> sub-second inference use the **Groq Cloud** backend, which runs on Groq's LPUs
+> via API regardless of the Space hardware.
 
 ---
 

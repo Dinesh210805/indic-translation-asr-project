@@ -11,7 +11,7 @@ from app.asr_pipeline import (
     transcribe_audio,
     transcribe_with_groq,
 )
-from app.transliteration import transliterate_tamil_to_latin
+from app.transliteration import transliterate_tamil_to_latin, transliterate_latin_to_tamil
 from app.buffer_manager import AudioBufferManager
 from app.utils import load_audio, save_output_json
 from app.visualizations import (
@@ -29,7 +29,7 @@ from models.model_config import (
     TRANSLITERATION_SCHEMES,
     DEFAULT_MODEL,
     DEFAULT_SCHEME,
-    SAMPLE_RATE,
+    SAMPLE_RATE,  
     CHUNK_SECONDS,
     STRIDE_SECONDS,
 )
@@ -174,28 +174,111 @@ footer, .show-api { display: none !important; }
 }
 .stage-card .meta b { color: #ffb38a; font-weight: 600; margin-right: 4px; }
 
-/* ─── whisper architecture ──────────────────────────────────────────── */
-.arch-wrap {
-    display: flex; align-items: center; gap: 6px; padding: 18px 8px;
-    overflow-x: auto;
+/* ─── whisper architecture — detailed ──────────────────────────────── */
+.wa-root {
+    padding: 8px 2px 4px;
 }
-.arch-wrap .block {
-    flex: 1 1 0; min-width: 90px;
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-    padding: 14px 8px; border-radius: 12px;
-    background: rgba(255,255,255,.04);
+.wa-meta {
+    display: flex; flex-wrap: wrap; gap: 6px 10px;
+    margin: 0 0 14px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+    color: #c9cdd9;
+}
+.wa-meta span {
+    padding: 3px 9px; background: rgba(138,215,255,.06);
+    border: 1px solid rgba(138,215,255,.16);
+    border-radius: 6px;
+}
+.wa-meta b { color: #8ad7ff; font-weight: 600; margin-right: 5px; }
+
+.wa-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+    position: relative;
+}
+.wa-col { display: flex; flex-direction: column; gap: 6px; }
+.wa-col-head {
+    font-size: 11px; color: #c062ff; font-weight: 600; letter-spacing: 0.12em;
+    text-transform: uppercase; margin-bottom: 4px;
+}
+
+.wa-stage {
+    background: rgba(255,255,255,.025);
     border: 1px solid rgba(255,255,255,.08);
+    border-radius: 12px;
+    padding: 12px 14px;
     transition: all .25s ease;
 }
-.arch-wrap .block.active {
-    background: linear-gradient(135deg, rgba(255,138,76,.20), rgba(192,98,255,.18));
-    border-color: rgba(255,138,76,.55);
-    box-shadow: 0 0 0 1px rgba(255,138,76,.30), 0 6px 24px -8px rgba(255,138,76,.50);
-    transform: translateY(-2px);
+.wa-stage.wa-active {
+    background: linear-gradient(135deg, rgba(255,138,76,.12), rgba(192,98,255,.08));
+    border-color: rgba(255,138,76,.50);
+    box-shadow: 0 0 0 1px rgba(255,138,76,.20), 0 6px 22px -6px rgba(255,138,76,.40);
 }
-.arch-wrap .sym { font-size: 22px; color: #ffd9b8; letter-spacing: 4px; }
-.arch-wrap .lbl { font-size: 11px; color: #9aa1b1; text-transform: uppercase; letter-spacing: .08em; }
-.arch-wrap .arr { color: #5b6275; font-size: 22px; padding: 0 4px; }
+.wa-stage.wa-big { padding: 14px 16px; }
+.wa-title {
+    font-size: 13.5px; font-weight: 600; color: #fff; margin-bottom: 4px;
+}
+.wa-shape {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: #8ad7ff; margin-bottom: 6px;
+    padding: 3px 8px; background: rgba(138,215,255,.06);
+    border-radius: 6px; display: inline-block;
+}
+.wa-desc {
+    color: #9aa1b1; font-size: 12px; line-height: 1.5;
+    margin-top: 4px;
+}
+.wa-arrow {
+    color: #5b6275; font-size: 11px; padding: 4px 4px 4px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    border-left: 2px solid rgba(255,255,255,.06);
+    margin-left: 14px;
+}
+
+.wa-stack {
+    display: flex; flex-wrap: wrap; gap: 3px;
+    margin: 8px 0; align-items: center;
+}
+.wa-tx {
+    width: 14px; height: 22px; border-radius: 3px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.3) inset;
+    opacity: 0.85;
+}
+.wa-more {
+    color: #c9cdd9; font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    margin-left: 8px;
+}
+
+.wa-block-detail {
+    background: rgba(0,0,0,.25);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: #b8c0d0;
+    margin: 6px 0;
+    border: 1px solid rgba(255,255,255,.05);
+}
+.wa-block-detail > div:first-child {
+    color: #c9cdd9; font-weight: 600; margin-bottom: 2px;
+    font-family: 'Inter', system-ui;
+}
+.wa-sub {
+    font-family: 'JetBrains Mono', monospace;
+    color: #9aa1b1;
+}
+.wa-sub.wa-cross {
+    color: #8ad7ff;
+    background: rgba(138,215,255,.06);
+    padding: 2px 6px; border-radius: 4px;
+    border-left: 2px solid #8ad7ff;
+}
+.wa-sub b { color: #ffd9b8; }
+
+.wa-bridge {
+    width: 100%; height: 50px; margin-top: -6px;
+}
+.wa-spacer { flex: 1; }
 
 /* ─── glyph mapping ─────────────────────────────────────────────────── */
 .mapping {
@@ -271,6 +354,26 @@ footer, .show-api { display: none !important; }
 .roman-output textarea {
     font-family: 'JetBrains Mono','Fira Code',ui-monospace,monospace !important;
     font-size: 14px !important; line-height: 1.7 !important; color: #b8e0ff !important;
+}
+
+/* ─── bonus playground ──────────────────────────────────────────────── */
+.bonus-head {
+    margin: 30px 0 14px; padding: 18px 24px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(138,215,255,.08), rgba(192,98,255,.05));
+    border: 1px solid rgba(138,215,255,.18);
+}
+.bonus-head h2 {
+    margin: 0 0 4px; font-size: 18px; font-weight: 700; color: #fff;
+    background: linear-gradient(120deg,#8ad7ff,#c9b8ff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.bonus-head p { margin: 0; color: #9aa1b1; font-size: 13px; line-height: 1.55; }
+.bonus-head .tag {
+    display: inline-block; padding: 2px 9px; margin-right: 8px;
+    border-radius: 999px; font-size: 11px; font-weight: 600;
+    background: rgba(138,215,255,.18); color: #8ad7ff;
+    border: 1px solid rgba(138,215,255,.30); letter-spacing: 0.05em;
 }
 
 /* ─── footer ────────────────────────────────────────────────────────── */
@@ -367,8 +470,12 @@ def _idle_visual() -> str:
 
 
 # ─── Main pipeline generator ────────────────────────────────────────────
-def process_audio(audio_path: str, model_name: str, scheme: str):
-    """Generator yielding (flow_svg, stage_html, transcript, romanized, json_path)."""
+def process_audio(audio_input, model_name: str, scheme: str):
+    """Generator yielding (flow_svg, stage_html, transcript, romanized, json_path).
+
+    audio_input: (sample_rate, np.ndarray) tuple from gr.Audio(type="numpy"),
+                 or None if nothing was provided.
+    """
     req_id = uuid.uuid4().hex[:8]
     logger.info("[req=%s] start — model=%s scheme=%s", req_id, model_name, scheme)
     done: list[str] = []
@@ -395,9 +502,54 @@ def process_audio(audio_path: str, model_name: str, scheme: str):
     # Initial / idle
     yield y(None)
 
-    if audio_path is None or not os.path.exists(audio_path):
-        msg = ("No audio provided. Upload a file or record via the microphone."
-               if audio_path is None else f"Audio file not found: {audio_path}")
+    # ── Normalize input ─────────────────────────────────────────────────
+    # gr.Audio(type="numpy") always delivers (sample_rate, np.ndarray) or None.
+    # We convert to a WAV temp file immediately so the rest of the pipeline
+    # works with a plain filepath regardless of source (mic or upload).
+    audio_path: str | None = None
+
+    if audio_input is None:
+        msg = "No audio provided. Upload a file or record via the microphone — press ⏹ Stop first, then Run."
+        title, explain = STAGE_TEXT["receive"]
+        body = f'<div style="color:#ff8585;font-size:14px;padding:20px">⚠ {html.escape(msg)}</div>'
+        update("receive", title, "", explain, [], body, state="error")
+        yield y(None, msg)
+        return
+
+    try:
+        import soundfile as sf  # bundled with gradio
+        import tempfile as _tmp
+        import numpy as _np
+
+        sr_in, data = audio_input
+        data = _np.asarray(data)
+
+        if data.ndim > 1:            # stereo → mono
+            data = data.mean(axis=-1)
+        if data.dtype.kind in "iu":  # int PCM → float32
+            data = data.astype(_np.float32) / _np.iinfo(data.dtype).max
+        else:
+            data = data.astype(_np.float32)
+
+        if len(data) < 100 or float(_np.max(_np.abs(data))) < 1e-6:
+            msg = ("Recording appears silent or empty — make sure the browser "
+                   "granted microphone permission, speak into the mic, press ⏹ Stop, "
+                   "wait for the waveform to appear, then click Run.")
+            title, explain = STAGE_TEXT["receive"]
+            body = f'<div style="color:#ff8585;font-size:14px;padding:20px">⚠ {html.escape(msg)}</div>'
+            update("receive", title, "", explain, [], body, state="error")
+            yield y(None, msg)
+            return
+
+        tmp = _tmp.NamedTemporaryFile(suffix=".wav", delete=False)
+        sf.write(tmp.name, data, sr_in)
+        audio_path = tmp.name
+        logger.info("[req=%s] input → WAV: %s  (%d samples @ %d Hz)",
+                    req_id, audio_path, len(data), sr_in)
+
+    except Exception as e:
+        logger.exception("[req=%s] failed to process audio input", req_id)
+        msg = f"Could not read audio: {e}"
         title, explain = STAGE_TEXT["receive"]
         body = f'<div style="color:#ff8585;font-size:14px;padding:20px">⚠ {html.escape(msg)}</div>'
         update("receive", title, "", explain, [], body, state="error")
@@ -473,7 +625,7 @@ def process_audio(audio_path: str, model_name: str, scheme: str):
             ("backend ", "Groq Cloud"),
             ("model ", "whisper-large-v3-turbo"),
             ("hardware ", "LPU (Groq)"),
-        ], whisper_arch_html(active="encoder"))
+        ], whisper_arch_html(model_name="whisper-large-v3-turbo", active="encoder"))
     else:
         try:
             load_asr_model(model_name)
@@ -488,7 +640,7 @@ def process_audio(audio_path: str, model_name: str, scheme: str):
             ("backend ", "Local"),
             ("model ", hf_id.split("/")[-1]),
             ("device ", "CPU"),
-        ], whisper_arch_html(active="encoder"))
+        ], whisper_arch_html(model_name=hf_id.split("/")[-1], active="encoder"))
     yield y("model")
 
     # ── Stage 5: transcribe ─────────────────────────────────────────────
@@ -596,6 +748,17 @@ def process_audio(audio_path: str, model_name: str, scheme: str):
     logger.info("[req=%s] done", req_id)
 
 
+def reverse_transliterate(roman_text: str, scheme: str) -> str:
+    """Convert romanized Tamil (e.g. 'vaNakkam') back into Tamil script."""
+    if not roman_text or not roman_text.strip():
+        return ""
+    try:
+        return transliterate_latin_to_tamil(roman_text, scheme)
+    except Exception as e:
+        logger.exception("Reverse transliteration failed")
+        return f"Error: {e}"
+
+
 def _model_label(name: str) -> str:
     cfg = MODEL_CONFIGS[name]
     return f"{cfg.get('params', '?')} params · {cfg.get('description', '')}"
@@ -630,15 +793,9 @@ def build_ui() -> gr.Blocks:
             with gr.Column(scale=5):
                 audio_input = gr.Audio(
                     sources=["upload", "microphone"],
-                    type="filepath",
-                    label="Audio input",
-                    streaming=False,
+                    type="numpy",
+                    label="Audio input  ·  mic: press ⏺ Record, speak, press ⏹ Stop, then click Run",
                     interactive=True,
-                    waveform_options=gr.WaveformOptions(
-                        show_recording_waveform=True,
-                        waveform_color="#ff8a4c",
-                        waveform_progress_color="#c062ff",
-                    ),
                 )
             with gr.Column(scale=3):
                 model_selector = gr.Dropdown(
@@ -681,6 +838,52 @@ def build_ui() -> gr.Blocks:
                 )
         download_file = gr.File(label="Download JSON output",
                                 file_count="single", interactive=False)
+
+        # ─── Bonus: Roman → Tamil playground ─────────────────────────
+        gr.HTML(
+            '<div class="bonus-head">'
+            '  <h2><span class="tag">BONUS</span>Roman → Tamil script</h2>'
+            '  <p>Type romanized Tamil (e.g. <code>vaNakkam</code> in ITRANS, or <code>vaṇakkam</code> in ISO/IAST) '
+            '  and get the Tamil script back. This is the reverse direction of the main pipeline — same '
+            '  <code>indic-transliteration</code> library, opposite mapping.</p>'
+            '</div>'
+        )
+        with gr.Row():
+            with gr.Column(scale=5):
+                reverse_input = gr.Textbox(
+                    label="Roman input",
+                    placeholder="e.g. vaNakkam ulagam (ITRANS) or vaṇakkam ulakam (ISO)",
+                    lines=3,
+                    elem_classes=["roman-output"],
+                )
+                reverse_scheme = gr.Dropdown(
+                    choices=TRANSLITERATION_SCHEMES,
+                    value=DEFAULT_SCHEME,
+                    label="Source scheme",
+                    info="Which romanization convention is your input in?",
+                )
+                reverse_btn = gr.Button("→ Convert to Tamil", variant="primary",
+                                        elem_classes=["run-btn"])
+            with gr.Column(scale=5):
+                reverse_output = gr.Textbox(
+                    label="Tamil script",
+                    placeholder="தமிழ் ஸ்கிரிப்ட் இங்கே ...",
+                    lines=5,
+                    interactive=False,
+                    elem_classes=["tamil-output"],
+                )
+
+        reverse_btn.click(
+            fn=reverse_transliterate,
+            inputs=[reverse_input, reverse_scheme],
+            outputs=[reverse_output],
+        )
+        # Also fire on Enter inside the textbox
+        reverse_input.submit(
+            fn=reverse_transliterate,
+            inputs=[reverse_input, reverse_scheme],
+            outputs=[reverse_output],
+        )
 
         gr.HTML(FOOTER_HTML)
 

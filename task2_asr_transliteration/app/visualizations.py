@@ -216,28 +216,172 @@ def flow_diagram_html(current: str | None, done: Iterable[str]) -> str:
 
 
 # ──────────────────────────────────────────────────────────────────────
-# Whisper architecture — animated SVG
+# Whisper architecture — full detailed diagram
 # ──────────────────────────────────────────────────────────────────────
-def whisper_arch_html(active: str = "encoder") -> str:
-    """A simplified architecture flow: mel → encoder → cross-attn → decoder → tokens."""
-    blocks = [("mel-spec", "📊"), ("encoder", "⬛⬛⬛"), ("cross-attn", "⇆"),
-              ("decoder", "⬛⬛⬛"), ("tokens", "abc")]
-    cells = []
-    for name, sym in blocks:
-        cls = "block active" if name == active else "block"
-        cells.append(
-            f'<div class="{cls}">'
-            f'  <div class="sym">{sym}</div>'
-            f'  <div class="lbl">{name}</div>'
-            f'</div>'
+# Architecture specs sourced from the Whisper paper + HF model configs.
+# Keys match the model_config.py hf_id suffix.
+WHISPER_SPECS = {
+    "whisper-small":  {"enc": 12, "dec": 12, "dim": 768,  "heads": 12, "ffn": 3072, "vocab": 51865, "params": "244 M"},
+    "whisper-medium": {"enc": 24, "dec": 24, "dim": 1024, "heads": 16, "ffn": 4096, "vocab": 51865, "params": "769 M"},
+    "whisper-large-v3-turbo": {"enc": 32, "dec": 4, "dim": 1280, "heads": 20, "ffn": 5120, "vocab": 51866, "params": "809 M"},
+}
+
+
+def whisper_arch_html(model_name: str = "whisper-small", active: str = "encoder",
+                      chunk_seconds: int = 30) -> str:
+    """Detailed Whisper architecture diagram with real specs and tensor shapes.
+
+    Args:
+        model_name: matches a key in WHISPER_SPECS (or its hf_id suffix).
+        active: which logical step is currently running. One of
+                'mel', 'encoder', 'cross', 'decoder', 'tokens'.
+        chunk_seconds: chunk window length, used for sample-count math.
+    """
+    key = model_name.split("/")[-1]
+    spec = WHISPER_SPECS.get(key, WHISPER_SPECS["whisper-small"])
+
+    samples = SAMPLE_RATE * chunk_seconds          # 480,000 for 30s
+    mel_frames = chunk_seconds * 100               # mel hop=10ms → 100 frames/s
+    enc_tokens = mel_frames // 2                   # conv stem stride=2
+
+    enc_depth = spec["enc"]
+    dec_depth = spec["dec"]
+
+    def stage_class(name: str) -> str:
+        return "wa-stage" + (" wa-active" if active == name else "")
+
+    # Block strip helper — render N small rectangles representing a transformer stack
+    def stack_strip(n: int, color: str) -> str:
+        # cap visual to 12 cells to keep layout tight, label overflow
+        shown = min(n, 12)
+        cells = "".join(
+            f'<div class="wa-tx" style="background:{color}"></div>' for _ in range(shown)
         )
-        cells.append('<div class="arr">→</div>')
-    cells.pop()  # drop trailing arrow
-    return (
-        '<div class="arch-wrap">'
-        + "".join(cells) +
-        '</div>'
-    )
+        more = f'<span class="wa-more">×{n}</span>' if n > 0 else ""
+        return f'<div class="wa-stack">{cells}{more}</div>'
+
+    html_out = f"""
+<div class="wa-root">
+
+  <div class="wa-meta">
+    <span><b>model</b> {key}</span>
+    <span><b>params</b> {spec['params']}</span>
+    <span><b>d_model</b> {spec['dim']}</span>
+    <span><b>heads</b> {spec['heads']}</span>
+    <span><b>encoder</b> {spec['enc']} blocks</span>
+    <span><b>decoder</b> {spec['dec']} blocks</span>
+    <span><b>vocab</b> {spec['vocab']:,}</span>
+  </div>
+
+  <div class="wa-grid">
+    <!-- LEFT COLUMN: data shapes flowing down -->
+    <div class="wa-col">
+
+      <div class="{stage_class('mel')}">
+        <div class="wa-title">🎙️ Audio waveform</div>
+        <div class="wa-shape">shape: ({samples:,},)  ·  float32</div>
+        <div class="wa-desc">{chunk_seconds} s of 16 kHz mono audio = {samples:,} samples. This is what came out of the chunk buffer.</div>
+      </div>
+
+      <div class="wa-arrow">↓ STFT (n_fft=400, hop=160) + mel filterbank</div>
+
+      <div class="{stage_class('mel')}">
+        <div class="wa-title">📊 Log-mel spectrogram</div>
+        <div class="wa-shape">shape: (80, {mel_frames})  ·  float32</div>
+        <div class="wa-desc">80 mel-frequency bins × {mel_frames} time frames (10 ms each). Magnitude in log dB — Whisper was trained on exactly this format.</div>
+      </div>
+
+      <div class="wa-arrow">↓ Conv1d stem (kernel=3, stride=2) × 2 + GELU</div>
+
+      <div class="{stage_class('encoder')}">
+        <div class="wa-title">🔵 Encoder input embeddings</div>
+        <div class="wa-shape">shape: ({enc_tokens}, {spec['dim']})  ·  float32</div>
+        <div class="wa-desc">Conv stem downsamples time by 2× and projects to d_model = {spec['dim']}. Sinusoidal positional encoding is added here.</div>
+      </div>
+
+      <div class="wa-arrow">↓ pass through encoder stack</div>
+
+      <div class="{stage_class('encoder')} wa-big">
+        <div class="wa-title">🔵 ENCODER — {enc_depth}× transformer blocks</div>
+        {stack_strip(enc_depth, '#ff8a4c')}
+        <div class="wa-block-detail">
+          <div>each block:</div>
+          <div class="wa-sub">→ LayerNorm</div>
+          <div class="wa-sub">→ Multi-head self-attention ({spec['heads']} heads, d_k = {spec['dim']//spec['heads']})</div>
+          <div class="wa-sub">→ Residual + LayerNorm</div>
+          <div class="wa-sub">→ Feed-forward (d_ff = {spec['ffn']:,}, GELU)</div>
+          <div class="wa-sub">→ Residual</div>
+        </div>
+        <div class="wa-desc">Self-attention lets every audio frame look at every other frame to build context — that's how Whisper handles coarticulation, prosody, and Tamil's long-distance vowel harmony.</div>
+      </div>
+
+      <div class="wa-arrow">↓ encoder output: ({enc_tokens}, {spec['dim']})</div>
+
+      <div class="wa-spacer"></div>
+    </div>
+
+    <!-- RIGHT COLUMN: decoder side -->
+    <div class="wa-col">
+      <div class="wa-col-head">Decoder (autoregressive)</div>
+
+      <div class="{stage_class('decoder')}">
+        <div class="wa-title">🟣 Decoder input</div>
+        <div class="wa-shape">tokens so far: [&lt;SOT&gt;, &lt;|ta|&gt;, &lt;|transcribe|&gt;, ...]</div>
+        <div class="wa-desc">Decoder is autoregressive — at step t, it sees only the tokens it has already emitted (plus special tokens that prime it for Tamil transcription).</div>
+      </div>
+
+      <div class="wa-arrow">↓ token embeddings + positional encoding</div>
+
+      <div class="{stage_class('decoder')} wa-big">
+        <div class="wa-title">🟣 DECODER — {dec_depth}× transformer blocks</div>
+        {stack_strip(dec_depth, '#c062ff')}
+        <div class="wa-block-detail">
+          <div>each block:</div>
+          <div class="wa-sub">→ Masked self-attention (can only see past tokens)</div>
+          <div class="wa-sub wa-cross">→ <b>Cross-attention</b> ⇽ encoder output</div>
+          <div class="wa-sub">→ Feed-forward (d_ff = {spec['ffn']:,}, GELU)</div>
+        </div>
+        <div class="wa-desc">Cross-attention is where audio meets text — every Tamil token "queries" the encoded audio to decide what to emit next.</div>
+      </div>
+
+      <div class="wa-arrow">↓ hidden states</div>
+
+      <div class="{stage_class('tokens')}">
+        <div class="wa-title">📐 Output head — tied to token embeddings</div>
+        <div class="wa-shape">Linear({spec['dim']} → {spec['vocab']:,}) + softmax</div>
+        <div class="wa-desc">Project to vocabulary, softmax, sample (or argmax) one token. Feed it back into the decoder and repeat until &lt;EOT&gt;.</div>
+      </div>
+
+      <div class="wa-arrow">↓ next token</div>
+
+      <div class="{stage_class('tokens')}">
+        <div class="wa-title">🔤 Tamil text tokens</div>
+        <div class="wa-shape">e.g. ['வ', 'ண', 'க்', 'கம்', ' ', 'உ', 'ல', 'க', 'ம்']</div>
+        <div class="wa-desc">BPE detokenizer assembles tokens back into Tamil Unicode text. This is the transcript you see at the bottom of the UI.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Cross-attention bridge -->
+  <svg class="wa-bridge" viewBox="0 0 400 80" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="bridgeGrad" x1="0" x2="1">
+        <stop offset="0%" stop-color="#ff8a4c"/>
+        <stop offset="100%" stop-color="#c062ff"/>
+      </linearGradient>
+    </defs>
+    <path d="M 20 20 Q 200 80 380 20" fill="none"
+          stroke="url(#bridgeGrad)" stroke-width="2.5" stroke-dasharray="6 4">
+      <animate attributeName="stroke-dashoffset" from="0" to="-20"
+               dur="1.2s" repeatCount="indefinite"/>
+    </path>
+    <text x="200" y="65" text-anchor="middle" fill="#8ad7ff" font-size="11"
+          font-family="Inter, system-ui">cross-attention</text>
+  </svg>
+
+</div>"""
+    return html_out
 
 
 # ──────────────────────────────────────────────────────────────────────
