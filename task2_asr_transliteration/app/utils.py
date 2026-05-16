@@ -1,6 +1,7 @@
 import json
 import os
 import logging
+import time
 import numpy as np
 import librosa
 
@@ -18,8 +19,22 @@ def load_audio(file_path: str, target_sr: int = 16000) -> np.ndarray:
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Audio file not found: {file_path}")
 
+    size_kb = os.path.getsize(file_path) / 1024
+    logger.info("Loading audio: %s (%.1f KB)", file_path, size_kb)
+
+    t0 = time.perf_counter()
     audio, sr = librosa.load(file_path, sr=target_sr, mono=True)
-    logger.debug("Loaded %s: %.1f seconds at %dHz", file_path, len(audio) / target_sr, target_sr)
+    duration = len(audio) / target_sr
+    logger.info(
+        "Loaded %s — %.2fs @ %dHz, %d samples, dtype=%s, loaded in %.2fs",
+        os.path.basename(file_path), duration, target_sr, len(audio), audio.dtype,
+        time.perf_counter() - t0,
+    )
+    if duration < 0.1:
+        logger.warning(
+            "Audio is very short (%.3fs). If you recorded via the mic, the recording may not have captured anything — "
+            "check browser mic permissions and re-record.", duration,
+        )
     return audio.astype(np.float32)
 
 

@@ -20,6 +20,7 @@ gradio>=4.36.0
 # Utilities
 python-dotenv>=1.0.0
 numpy>=1.24.0
+matplotlib>=3.7.0
 
 # Testing
 pytest>=8.0.0

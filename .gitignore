@@ -23,3 +23,5 @@ task2_asr_transliteration/outputs/*
 # Common Voice downloaded clips — track index.csv but not audio
 task2_asr_transliteration/sample_inputs/common_voice/*.wav
 task2_asr_transliteration/sample_inputs/common_voice/*.mp3
+# Local HuggingFace model cache (multi-GB weights — never committed)
+task2_asr_transliteration/models_cache/
