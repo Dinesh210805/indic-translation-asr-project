@@ -260,7 +260,37 @@ def whisper_arch_html(model_name: str = "whisper-small", active: str = "encoder"
         more = f'<span class="wa-more">×{n}</span>' if n > 0 else ""
         return f'<div class="wa-stack">{cells}{more}</div>'
 
-    html_out = f"""
+    # Self-contained styles: HF Spaces SSR doesn't always propagate CUSTOM_CSS into
+    # inner gr.HTML content, so the rules travel with the markup.
+    arch_css = """
+<style>
+.wa-root{padding:8px 2px 4px}
+.wa-meta{display:flex;flex-wrap:wrap;gap:6px 10px;margin:0 0 14px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#c9cdd9}
+.wa-meta span{padding:3px 9px;background:rgba(138,215,255,.06);border:1px solid rgba(138,215,255,.16);border-radius:6px}
+.wa-meta b{color:#8ad7ff;font-weight:600;margin-right:5px}
+.wa-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;position:relative}
+.wa-col{display:flex;flex-direction:column;gap:6px}
+.wa-col-head{font-size:11px;color:#c062ff;font-weight:600;letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px}
+.wa-stage{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 14px;transition:all .25s ease}
+.wa-stage.wa-active{background:linear-gradient(135deg,rgba(255,138,76,.12),rgba(192,98,255,.08));border-color:rgba(255,138,76,.50);box-shadow:0 0 0 1px rgba(255,138,76,.20),0 6px 22px -6px rgba(255,138,76,.40)}
+.wa-stage.wa-big{padding:14px 16px}
+.wa-title{font-size:13.5px;font-weight:600;color:#fff;margin-bottom:4px}
+.wa-shape{font-family:'JetBrains Mono',monospace;font-size:11px;color:#8ad7ff;margin-bottom:6px;padding:3px 8px;background:rgba(138,215,255,.06);border-radius:6px;display:inline-block}
+.wa-desc{color:#9aa1b1;font-size:12px;line-height:1.5;margin-top:4px}
+.wa-arrow{color:#5b6275;font-size:11px;padding:4px 4px 4px 14px;font-family:'JetBrains Mono',monospace;border-left:2px solid rgba(255,255,255,.06);margin-left:14px}
+.wa-stack{display:flex;flex-wrap:wrap;gap:3px;margin:8px 0;align-items:center}
+.wa-tx{width:14px;height:22px;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.3) inset;opacity:.85}
+.wa-more{color:#c9cdd9;font-size:11px;font-family:'JetBrains Mono',monospace;margin-left:8px}
+.wa-block-detail{background:rgba(0,0,0,.25);border-radius:8px;padding:10px 12px;font-size:11.5px;line-height:1.6;color:#b8c0d0;margin:6px 0;border:1px solid rgba(255,255,255,.05)}
+.wa-block-detail>div:first-child{color:#c9cdd9;font-weight:600;margin-bottom:2px;font-family:'Inter',system-ui}
+.wa-sub{font-family:'JetBrains Mono',monospace;color:#9aa1b1}
+.wa-sub.wa-cross{color:#8ad7ff;background:rgba(138,215,255,.06);padding:2px 6px;border-radius:4px;border-left:2px solid #8ad7ff}
+.wa-sub b{color:#ffd9b8}
+.wa-bridge{width:100%;height:50px;margin-top:-6px}
+.wa-spacer{flex:1}
+</style>
+"""
+    html_out = arch_css + f"""
 <div class="wa-root">
 
   <div class="wa-meta">
@@ -395,25 +425,44 @@ def glyph_mapping_html(tamil: str, roman: str, max_pairs: int = 18) -> str:
     """
     # Take a representative slice so we don't overwhelm the UI on long transcripts.
     src_chars = [c for c in tamil if not c.isspace()][:max_pairs]
-    # Slice romanised output proportionally
+    empty_style = "color:#7d8395;font-size:13px;padding:24px;text-align:center"
     if not src_chars:
-        return '<div class="mapping empty">— no characters —</div>'
+        return f'<div style="{empty_style}">— no characters —</div>'
+
+    # Inline ALL styles — HF Spaces SSR strips/scopes external CSS for gr.HTML content.
+    grid_style = (
+        "display:grid;"
+        "grid-template-columns:repeat(auto-fill,minmax(78px,1fr));"
+        "gap:10px;padding:8px 4px;"
+    )
+    pair_style = (
+        "display:flex;flex-direction:column;align-items:center;"
+        "padding:10px 8px;border-radius:12px;"
+        "background:rgba(255,255,255,.03);"
+        "border:1px solid rgba(255,255,255,.07);"
+    )
+    src_style = (
+        "font-family:'Noto Sans Tamil','Latha','Nirmala UI',system-ui;"
+        "font-size:22px;color:#ffd9b8;"
+    )
+    arr_style = "color:#5b6275;font-size:14px;margin:2px 0"
+    dst_style = "font-family:'JetBrains Mono',monospace;font-size:14px;color:#8ad7ff"
+
     ratio = max(1, len(roman) // max(1, len(src_chars)))
     pairs = []
     cursor = 0
-    for i, ch in enumerate(src_chars):
+    for ch in src_chars:
         slice_end = min(len(roman), cursor + ratio)
         dst = roman[cursor:slice_end].strip() or "·"
         cursor = slice_end
-        delay = i * 0.08
         pairs.append(
-            f'<div class="pair" style="animation-delay:{delay:.2f}s">'
-            f'  <div class="src">{html.escape(ch)}</div>'
-            f'  <div class="arr">→</div>'
-            f'  <div class="dst">{html.escape(dst[:4])}</div>'
+            f'<div style="{pair_style}">'
+            f'<div style="{src_style}">{html.escape(ch)}</div>'
+            f'<div style="{arr_style}">→</div>'
+            f'<div style="{dst_style}">{html.escape(dst[:4])}</div>'
             f'</div>'
         )
-    return '<div class="mapping">' + "".join(pairs) + "</div>"
+    return f'<div style="{grid_style}">' + "".join(pairs) + "</div>"
 
 
 # ──────────────────────────────────────────────────────────────────────
