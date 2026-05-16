@@ -121,7 +121,7 @@ Each bubble = one sentence; X = English tokens, Y = Tamil tokens, color = model.
   <img src="task1_translation_evaluation/part_b_token_analysis/plots/partb_radar_chart.png" alt="Multi-metric radar chart" width="800"/>
 </p>
 
-Five normalized metrics per model. **A small, balanced shape is good** — large excursions indicate weaknesses (Helsinki's outward spike on `subword_fragmentation`; NLLB's on `expansion_ratio`).
+5 normalized metrics per model. **A small, balanced shape is good** — large excursions indicate weaknesses (Helsinki's outward spike on `subword_fragmentation`; NLLB's on `expansion_ratio`).
 
 ---
 
