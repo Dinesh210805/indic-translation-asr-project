@@ -1,8 +1,10 @@
+import csv
 import html
 import logging
 import os
 import time
 import uuid
+from pathlib import Path
 
 import gradio as gr
 
@@ -35,6 +37,33 @@ from models.model_config import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _load_sample_clips(limit: int = 50) -> list[tuple[str, str]]:
+    """Return [(display_label, absolute_path), ...] for the sample-clip dropdown."""
+    base_dir = Path(__file__).resolve().parents[1] / "sample_inputs" / "common_voice"
+    index_path = base_dir / "index.csv"
+    if not index_path.exists():
+        logger.warning("Sample index not found at %s — sample picker will be empty", index_path)
+        return []
+    choices: list[tuple[str, str]] = []
+    with index_path.open("r", encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            wav_path = base_dir / row["filename"]
+            if not wav_path.exists():
+                continue
+            sentence = (row.get("sentence") or "").strip()
+            short_id = wav_path.stem.replace("common_voice_ta_", "ta_")
+            preview = sentence if len(sentence) <= 70 else sentence[:70] + "…"
+            label = f"{short_id}  ·  {preview}" if preview else short_id
+            choices.append((label, str(wav_path)))
+            if len(choices) >= limit:
+                break
+    logger.info("Loaded %d sample clips for the picker dropdown", len(choices))
+    return choices
+
+
+SAMPLE_CLIPS: list[tuple[str, str]] = _load_sample_clips()
 
 
 CUSTOM_CSS = """
@@ -509,7 +538,7 @@ def process_audio(audio_input, model_name: str, scheme: str):
     audio_path: str | None = None
 
     if audio_input is None:
-        msg = "No audio provided. Upload a file or record via the microphone — press ⏹ Stop first, then Run."
+        msg = "No audio provided. Pick a sample clip from the dropdown above, or upload your own audio file, then click Run."
         title, explain = STAGE_TEXT["receive"]
         body = f'<div style="color:#ff8585;font-size:14px;padding:20px">⚠ {html.escape(msg)}</div>'
         update("receive", title, "", explain, [], body, state="error")
@@ -532,9 +561,8 @@ def process_audio(audio_input, model_name: str, scheme: str):
             data = data.astype(_np.float32)
 
         if len(data) < 100 or float(_np.max(_np.abs(data))) < 1e-6:
-            msg = ("Recording appears silent or empty — make sure the browser "
-                   "granted microphone permission, speak into the mic, press ⏹ Stop, "
-                   "wait for the waveform to appear, then click Run.")
+            msg = ("Audio appears silent or empty. Try a different sample clip from "
+                   "the dropdown, or upload a clearer audio file, then click Run.")
             title, explain = STAGE_TEXT["receive"]
             body = f'<div style="color:#ff8585;font-size:14px;padding:20px">⚠ {html.escape(msg)}</div>'
             update("receive", title, "", explain, [], body, state="error")
@@ -791,10 +819,17 @@ def build_ui() -> gr.Blocks:
         # ─── Controls row ────────────────────────────────────────────
         with gr.Row():
             with gr.Column(scale=5):
+                sample_picker = gr.Dropdown(
+                    choices=SAMPLE_CLIPS,
+                    value=None,
+                    label=f"📚 Pick a sample clip  ({len(SAMPLE_CLIPS)} Common Voice Tamil sentences)",
+                    info="Selecting a clip loads it into the player below — press ▶ to preview, then Run pipeline.",
+                    interactive=bool(SAMPLE_CLIPS),
+                )
                 audio_input = gr.Audio(
-                    sources=["upload", "microphone"],
+                    sources=["upload"],
                     type="numpy",
-                    label="Audio input  ·  mic: press ⏺ Record, speak, press ⏹ Stop, then click Run",
+                    label="Audio input  ·  upload your own or load a sample above",
                     interactive=True,
                 )
             with gr.Column(scale=3):
@@ -891,6 +926,13 @@ def build_ui() -> gr.Blocks:
             fn=process_audio,
             inputs=[audio_input, model_selector, scheme_selector],
             outputs=[flow_view, stage_view, transcript_out, transliterated_out, download_file],
+        )
+
+        # Selecting a sample clip loads it into the audio player (built-in ▶ button).
+        sample_picker.change(
+            fn=lambda path: path,
+            inputs=sample_picker,
+            outputs=audio_input,
         )
 
     return demo

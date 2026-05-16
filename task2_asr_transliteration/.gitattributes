@@ -1,0 +1,2 @@
+sample_inputs/common_voice/*.wav filter=lfs diff=lfs merge=lfs -text
+*.wav filter=lfs diff=lfs merge=lfs -text

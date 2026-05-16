@@ -1,7 +1,10 @@
 # Core ASR
 torch>=2.1.0
-transformers>=4.40.0
+transformers>=4.40.0,<5.0
 accelerate>=0.27.0
+
+# Pin huggingface_hub <1.0 — gradio 4.x still imports HfFolder which was removed in hub 1.0
+huggingface_hub>=0.23,<1.0
 
 # Audio processing
 librosa>=0.10.0
@@ -14,14 +17,16 @@ groq>=0.4.0
 # Transliteration
 indic-transliteration>=2.3.0
 
-# UI
-gradio>=4.36.0
+# UI — need gradio >= 5.13 because earlier 5.x still bundled the broken
+# gradio_client 1.4.x ("argument of type 'bool' is not iterable" in
+# json_schema_to_python_type when additionalProperties is a bool).
+gradio>=5.34.0,<6.0
 
 # Utilities
 python-dotenv>=1.0.0
 numpy>=1.24.0
 matplotlib>=3.7.0
 
-# Testing
+# Testing (not required at runtime, but kept for local dev)
 pytest>=8.0.0
 pytest-cov>=5.0.0

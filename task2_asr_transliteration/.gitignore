@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.coverage
+.mypy_cache/
+
+# Env / secrets
+.env
+.venv/
+venv/
+
+# Logs
+*.log
+
+# Model weights — never push to Space (will be downloaded at runtime)
+models_cache/
+*.pt
+*.bin
+*.safetensors
+*.msgpack
+*.h5
+
+# Sample audio clips (Common Voice Tamil) are committed to the Space
+# so the sample-picker dropdown has playable files at runtime.
+# Block MP3 sources (we only need the WAVs that match index.csv).
+sample_inputs/common_voice/*.mp3
+
+# Generated outputs
+outputs/*.json
+!outputs/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db

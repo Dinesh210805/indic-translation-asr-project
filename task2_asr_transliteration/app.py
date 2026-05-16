@@ -23,5 +23,10 @@ from app.interface import build_ui
 demo = build_ui()
 demo.queue()
 
+# Disable the auto-generated /gradio_api/info schema endpoint to dodge the
+# gradio_client schema-introspection crash on certain component combos.
+# (Still safe with __init__ — show_api on Blocks works in gradio 5.x.)
+demo.show_api = False
+
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(show_api=False)
